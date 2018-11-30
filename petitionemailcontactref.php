@@ -147,3 +147,42 @@ function petitionemailcontactref_civicrm_buildForm($formName, &$form) {
     CRM_Core_Resources::singleton()->addScriptFile('com.jlacey.petitionemailcontactref', 'js/petitionemailcontactref.js');
   }
 }
+
+/**
+ * Implements hook_civicrm_validateForm().
+ *
+ * @param string $formName
+ * @param array $fields
+ * @param array $files
+ * @param CRM_Core_Form $form
+ * @param array $errors
+ *
+ * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_validateForm/
+ */
+function petitionemailcontactref_civicrm_validateForm($formName, &$fields, &$files, &$form, &$errors) {
+  if ($formName == 'CRM_Campaign_Form_Petition') {
+    $email_recipient_system_id = civicrm_api3('CustomField', 'getvalue', [
+      'return' => "id",
+      'name' => "Email_Recipient_System",
+    ]);
+    $email_recipient_system_custom_field_name = "custom_" . $email_recipient_system_id . "_1";
+    if ($fields["$email_recipient_system_custom_field_name"] == 'Contactref') {
+      $recipient_contact_reference_id = civicrm_api3('CustomField', 'getvalue', [
+        'return' => "id",
+        'name' => "Recipient_Contact_Reference",
+      ]);
+      $recipient_contact_reference_custom_field_name = "custom_" . $recipient_contact_reference_id . "_1";
+      if (!empty($fields["$recipient_contact_reference_custom_field_name"])) {
+        $recipient_contact_id = $fields["$recipient_contact_reference_custom_field_name"];
+        $recipient_contact_email = civicrm_api3('Contact', 'get', [
+          'return' => "email",
+          'id' => $recipient_contact_id,
+        ]);
+        if (empty($recipient_contact_email['values'][$recipient_contact_id]['email'])) {
+          //FIXME this doesn't highlight the field.
+          $errors["$recipient_contact_reference_custom_field_name"] = ts('Please select a recipient contact with an email address');
+        }
+      }
+    }
+  }
+}
